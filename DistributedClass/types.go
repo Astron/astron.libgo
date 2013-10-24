@@ -59,8 +59,8 @@ type KeywordList interface {
 	// Keywords returns the list of keywords as a slice
 	Keywords() []string
 
-	// Length returns the length of the keyword list
-	Length() int
+	// NumKeywords returns the length of the keyword list
+	NumKeywords() int
 }
 
 // type keywords is a string slice satisfying the KeywordList interface.
@@ -109,6 +109,6 @@ func (k keywords) Keywords() []string {
 }
 
 // implementing KeywordList
-func (k keywords) Length() int {
+func (k keywords) NumKeywords() int {
 	return len(k)
 }
