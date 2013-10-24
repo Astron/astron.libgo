@@ -50,14 +50,23 @@ type Field interface {
 	ParseString(s string) (data bytes.Buffer, err error)
 }
 
+// a fieldBase is a parent type which other implementations of the Field interface can extend
+type fieldBase struct {
+	dcf      *File  // file this type is associated with
+	name     string // name of the field
+	index    int    // the unique index of the type within the dclass file
+	keywords        // implements KeywordList
+}
+
 type Parameter struct {
-	keywords // implements KeywordList
-	dataTyp  DataType
-	defVal   bytes.Buffer
+	fieldBase // inherits from fieldBase
+
+	dataTyp DataType
+	defVal  bytes.Buffer
 }
 type AtomicField struct {
-	keywords // implements KeywordList
+	fieldBase // inherits from fieldBase
 }
 type MolecularField struct {
-	keywords // implements KeywordList
+	fieldBase // inherits from fieldBase
 }
