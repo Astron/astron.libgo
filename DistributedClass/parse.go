@@ -180,7 +180,7 @@ func (p parser) parseStructInner(s *Struct) bool {
 	// parse for parameters till we find a RightCurly
 	t = p.lex.nextToken()
 	for t.typ != tokenRightCurly && t.typ != tokenEOF && t.typ != tokenError {
-		if(!p.parseField(t)) {
+		if !p.parseField(t) {
 			return false
 		}
 		t = p.lex.nextToken()
