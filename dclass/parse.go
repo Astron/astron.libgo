@@ -113,8 +113,8 @@ func (p parser) parseDeclaration() bool {
 	}
 }
 
-// parses a keyword declaration `keyword foo;`, assumes the keyword token has already been consumed
-// returns false if upon reaching tokenEOF or tokenError
+// parseKeyword parses a keyword declaration `keyword foo;`.
+// Returns false upon reaching tokenEOF or tokenError.
 func (p parser) parseKeyword() bool {
 	p.next() // consume "keyword"
 
@@ -255,21 +255,21 @@ func (p parser) parseField(obj fieldAdder) bool {
 	}
 }
 
-// parses an atomic field `foo(...) ...;`, assumes the identifier has been consumed.
+// parseAtomic parses an atomic field `foo(...) ...;`, assumes the identifier has been consumed.
 // Returns false upon reaching tokenEOF or tokenError.
 // TODO: Implement
 func (p parser) parseAtomic(ident string, obj fieldAdder) bool {
 	return true
 }
 
-// parses a molecular field `foo: baz, bar;`, assumes the identifier has been consumed.
+// parseMolecular parses a molecular field `foo: baz, bar;`, assumes the identifier has been consumed.
 // Returns false upon reaching tokenEOF or tokenError.
 // TODO: Implement
 func (p parser) parseMolecular(ident string, obj fieldAdder) bool {
 	return true
 }
 
-// parses a parameter `type foo ...;` as either a struct/class member variable
+// parseParameter parses a parameter `type foo ...;` as either a struct/class member variable
 // or as an atomic field argument, assumes the type has been consumed.
 // Returns false upon reaching tokenEOF or tokenError.
 //
@@ -283,6 +283,9 @@ func (p parser) parseParameter(typTok token, obj fieldAdder, isArgument bool) bo
 	return true
 }
 
+// expectEndline checks if the next token is an endline ';' and then consumes it.
+// If not, it creates a parse error and consumes all the tokens until the next endline.
+// Returns false upon reaching tokenEOF or tokenError.
 func (p parser) expectEndline(startline int) bool {
 	var fail, next bool
 
@@ -308,6 +311,9 @@ func (p parser) expectEndline(startline int) bool {
 	return !fail
 }
 
+// expectRightCurly checks if the next token is a rightCurly '}' and then consumes it.
+// If not, it creates a parse error and consumes all the tokens until the next right curly.
+// Returns false upon reaching tokenEOF or tokenError.
 func (p parser) expectRightCurly(leftline int) bool {
 	t := p.next()
 	for t.typ != tokenRightCurly && t.typ != tokenEOF && t.typ != tokenError {
