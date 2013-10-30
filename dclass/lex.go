@@ -63,18 +63,19 @@ const (
 	tokenStruct   // 'struct' keyword
 
 	// Variable-type keyword types
-	tokenInt8   // signed 8-bit int keyword
-	tokenInt16  // signed 16-bit int keyword
-	tokenInt32  // signed 32-bit int keyword
-	tokenInt64  // signed 64-bit int keyword
-	tokenUint8  // unsigned 8-bit int keyword
-	tokenUint16 // unsigned 16-bit int keyword
-	tokenUint32 // unsigned 32-bit int keyword
-	tokenUint64 // unsigned 64-bit int keyword
-	tokenFloat  // 64-bit floating point keyword
-	tokenString // string keyword
-	tokenBlob   // blob keyword
-	tokenChar   // char keyword
+	tokenTypeDelim // used only to delimit the data type keywords
+	tokenInt8      // signed 8-bit int keyword
+	tokenInt16     // signed 16-bit int keyword
+	tokenInt32     // signed 32-bit int keyword
+	tokenInt64     // signed 64-bit int keyword
+	tokenUint8     // unsigned 8-bit int keyword
+	tokenUint16    // unsigned 16-bit int keyword
+	tokenUint32    // unsigned 32-bit int keyword
+	tokenUint64    // unsigned 64-bit int keyword
+	tokenFloat     // 64-bit floating point keyword
+	tokenString    // string keyword
+	tokenBlob      // blob keyword
+	tokenChar      // char keyword
 )
 
 var key = map[string]tokenType{
@@ -535,4 +536,8 @@ func isAlphaNumeric(r rune) bool {
 // isOperator reports whether r is an operator or assignment character
 func isOperator(r rune) bool {
 	return r == '+' || r == '-' || r == '*' || r == '/' || r == '%' || r == '='
+}
+
+func isDataTypeToken(t token) bool {
+	return t > tokenTypeDelim
 }

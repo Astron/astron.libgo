@@ -4,7 +4,8 @@ package dclass
 type DataType int
 
 const (
-	Int8Type DataType = iota
+	InvalidType DataType = iota
+	Int8Type
 	Int16Type
 	Int32Type
 	Int64Type

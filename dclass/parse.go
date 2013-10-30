@@ -37,6 +37,12 @@ type parser struct {
 	expectedStructs  map[string]int
 	expectedClasses  map[string]int
 
+	// The expectingFoo fields are maps from an expected identifier to the list
+	// of objects that are expecting it.
+	expectingKeyword map[string][]Field  // field is qualified by the missing keyword
+	expectingStruct  map[string][]Field  // field's datatype is defined as the missing struct
+	expectingClass   map[string][]*Class // class inherits from the missing class or struct
+
 	errors   []Error // errors encountered while parsing (including lexer errors)
 	foundEOF bool    // whether next() has encountered an eof token
 }
@@ -180,7 +186,7 @@ func (p parser) parseStructInner(s *Struct) bool {
 	// parse for parameters till we find a RightCurly
 	t = p.lex.nextToken()
 	for t.typ != tokenRightCurly && t.typ != tokenEOF && t.typ != tokenError {
-		if !p.parseField(t) {
+		if !p.parseField(s, t) {
 			return false
 		}
 		t = p.lex.nextToken()
@@ -207,10 +213,59 @@ func (p parser) parseClass() bool {
 	return true
 }
 
+// the fieldAdder interface is used by parseField() to accept any object that
+// that can be composed of fields.
+type fieldAdder interface {
+	// AddField creates a new field and adds it to the object. The typ argument
+	// can be one of "parameter", "atomic", or "molecular".  Will return nil if
+	// the specified field type cannot be added to the object.
+	AddField(name, typ string) Field
+}
+
 // parses a field, the first token should have been consumed and passed as an argument
 // returns false upon reaching tokenEOF or tokenError
+func (p parser) parseField(obj fieldAdder, first token) bool {
+	switch {
+	case first.typ == tokenIdentifier:
+		t = p.lex.nextToken()
+		switch p.typ {
+		case tokenLeftParen:
+
+		}
+		if p.dcf.Classes[first.val] == nil {
+			p.parseParameter(obj, first, true)
+		} else {
+			p.parseMethod(obj, first.val)
+		}
+	case isDataTypeToken(first):
+		p.parseParameter(obj, first, true)
+	default:
+		p.errors = append(p.errors, parseError("expecting a field, found "+first.string(),
+			p.lex.lineNumber()))
+		return p.expectEndline(p.lex.lineNumber())
+	}
+	return true
+}
+
+// parses an atomic field `foo(...) ...;`, assumes the identifier and left paren have been consumed
+// returns false upon reaching tokenEOF or tokenError
 // TODO: Implement
-func (p parser) parseField(firstToken token) bool {
+func (p parser) parseAtomic(ident string, obj fieldAdder) bool {
+	return true
+}
+
+// parses a parameter `type foo ...;` as either a struct/class member variable
+// or as an atomic field argument, assumes the type and identifier have been consumed
+// 
+//
+// the allowKeywords argument should be true for a member variable or false for an argument
+// returns false upon reaching tokenEOF or tokenError
+// TODO: Implement
+func (p parser) parseParameter(ident string, obj fieldAdder, t token, allowKeywords bool) bool {
+	datatype := typeFromToken(t)
+	if datatype == InvalidType {
+		p.errors = append(p.errors)
+	}
 	return true
 }
 
@@ -274,6 +329,39 @@ func (p parser) next() token {
 		}
 
 		return t
+	}
+}
+
+func typeFromToken(t token) dataTyp {
+	switch t.typ {
+	case tokenInt8:
+		return Int8Type
+	case tokenInt16:
+		return Int16Type
+	case tokenInt32:
+		return Int32Type
+	case tokenInt64:
+		return Int64Type
+	case tokenUint8:
+		return Uint8Type
+	case tokenUint16:
+		return Uint16Type
+	case tokenUint32:
+		return Uint32Type
+	case tokenUint64:
+		return Uint64Type
+	case tokenFloat:
+		return FloatType
+	case tokenString:
+		return StringType
+	case tokenBlob:
+		return BlobType
+	case tokenChar:
+		return CharType
+	case tokenIdentifier:
+		return StructType
+	default:
+		return InvalidType
 	}
 }
 

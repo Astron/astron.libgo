@@ -70,3 +70,17 @@ type AtomicField struct {
 type MolecularField struct {
 	fieldBase // inherits from fieldBase
 }
+
+// AddField creates a new field and adds it to the object.
+// Atomic fields can only accept a "Parameter" field type.
+// TODO: Implement
+func (f *AtomicField) AddField(name, typ string) Field {
+	return nil
+}
+
+// AddField creates a new field and adds it to the object.
+// Molecular fields can accept "Parameter" and "AtomicField" field types.
+// TODO: Implement
+func (f *MolecularField) AddField(name, typ string) Field {
+	return nil
+}

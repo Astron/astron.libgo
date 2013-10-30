@@ -13,8 +13,8 @@ func (f *File) Hash() uint64 {
 	return 0
 }
 
-// NewStruct returns a new struct initialized with a name and unique index within the dclass file
-func (f *File) NewStruct(name string) *Struct {
+// AddStruct returns a new struct initialized with a name and unique index within the dclass file
+func (f *File) AddStruct(name string) *Struct {
 	s := new(Struct)
 	s.dcf = f
 	s.name = name
@@ -22,8 +22,8 @@ func (f *File) NewStruct(name string) *Struct {
 	return s
 }
 
-// NewStruct returns a new class initialized with a name and unique index within the dclass file
-func (f *File) NewClass(name string) *Class {
+// AddStruct returns a new class initialized with a name and unique index within the dclass file
+func (f *File) AddClass(name string) *Class {
 	c := new(Class)
 	c.dcf = f
 	c.name = name
