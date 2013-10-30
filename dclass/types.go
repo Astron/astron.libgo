@@ -70,21 +70,21 @@ type KeywordList interface {
 type keywords []string
 
 // implementing KeywordList
-func (k keywords) AddKeyword(keyword string) {
+func (k *keywords) AddKeyword(keyword string) {
 	if !k.HasKeyword(keyword) {
 		k = append(k, keyword)
 	}
 }
 
 // implementing KeywordList
-func (k keywords) AddKeywords(list KeywordList) {
+func (k *keywords) AddKeywords(list KeywordList) {
 	for _, keyword := range list.Keywords() {
 		k.AddKeyword(keyword)
 	}
 }
 
 // implementing KeywordList
-func (k keywords) CompareKeywords(list KeywordList) bool {
+func (k *keywords) CompareKeywords(list KeywordList) bool {
 	if len(k) != len(list.Keywords()) {
 		return false
 	}
@@ -97,7 +97,7 @@ func (k keywords) CompareKeywords(list KeywordList) bool {
 }
 
 // implementing KeywordList
-func (k keywords) HasKeyword(keyword string) bool {
+func (k *keywords) HasKeyword(keyword string) bool {
 	for _, word := range k {
 		if keyword == word {
 			return true
@@ -107,12 +107,12 @@ func (k keywords) HasKeyword(keyword string) bool {
 }
 
 // implementing KeywordList
-func (k keywords) Keywords() []string {
+func (k *keywords) Keywords() []string {
 	return []string(k)
 }
 
 // implementing KeywordList
-func (k keywords) NumKeywords() int {
+func (k *keywords) NumKeywords() int {
 	return len(k)
 }
 
