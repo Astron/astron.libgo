@@ -12,6 +12,15 @@ var definedKeywords = keywords{
 	"db",
 }
 
+type Type interface {
+	Hashable // inherits from Hashable
+
+	// AddField creates a new field and adds it to the object. The typ argument
+	// can be one of "parameter", "atomic", or "molecular".  Will return nil if
+	// the specified field type cannot be added to the type.
+	AddField(name, typ string) Field
+}
+
 // a typeBase is a parent type that the Class and Struct types should extend
 type typeBase struct {
 	dcf   *File  // file this type is associated with
@@ -32,7 +41,7 @@ func (c *Class) Hash() uint64 {
 // AddField creates a new field and adds it to the class. The typ argument
 // can be any one of "parameter", "atomic", or "molecular".
 // TODO: Implement
-func AddField(name, typ string) Field {
+func (c *Class) AddField(name, typ string) Field {
 	return nil
 }
 
@@ -49,6 +58,6 @@ func (s *Struct) Hash() uint64 {
 // AddField creates a new field and adds it to the struct.
 // Structs can only accept a "Parameter" field type.
 // TODO: Implement
-func (f *Struct) AddField(name, typ string) Field {
+func (s *Struct) AddField(name, typ string) Field {
 	return nil
 }

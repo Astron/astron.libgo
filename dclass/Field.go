@@ -61,8 +61,12 @@ type fieldBase struct {
 type Parameter struct {
 	fieldBase // inherits from fieldBase
 
-	dataTyp DataType
-	defVal  bytes.Buffer
+	dataType  DataType
+	isArray   bool
+	Range     Range
+	Transform Transform
+
+	defVal bytes.Buffer
 }
 type AtomicField struct {
 	fieldBase // inherits from fieldBase

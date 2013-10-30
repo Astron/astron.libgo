@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	/*	"runtime"
 		"strconv"
@@ -157,12 +158,13 @@ func (p parser) parseStruct() bool {
 		p.errors = append(p.errors, parseError(errStr, p.lex.lineNumber()))
 		return p.expectRightCurly(p.lex.lineNumber())
 	case tokenIdentifier:
-		if p.dcf.Structs[t.val] != nil {
-			p.errors = append(p.errors, parseError("struct "+t.val+" already defined above", p.lex.lineNumber()))
+		if p.dcf.ClassByName[t.val] != nil {
+			p.errors = append(p.errors, parseError("cannot define struct "+t.val+
+				", "+t.val+"already defined above", p.lex.lineNumber()))
 			return p.expectRightCurly(p.lex.lineNumber())
 		}
 
-		return p.parseStructInner(p.dcf.AddStruct(t.val))
+		return p.parseStructInner(p.dcf.AddType(t.val, "struct").(*Struct))
 	default:
 		p.errors = append(p.errors, parseError("unexpected '"+t.String()+"' in 'struct' declaration",
 			p.lex.lineNumber()))
@@ -197,6 +199,7 @@ func (p parser) parseStructInner(s *Struct) bool {
 		if !p.parseField(s) {
 			return false
 		}
+		t = p.peek()
 	}
 
 	p.next() // consume rightCurly, EOF, or Error
@@ -269,18 +272,120 @@ func (p parser) parseMolecular(ident string, obj fieldAdder) bool {
 	return true
 }
 
-// parseParameter parses a parameter `type foo ...;` as either a struct/class member variable
-// or as an atomic field argument, assumes the type has been consumed.
+// parseParameter parses a parameter as either  a struct/class member variable `type foo ...;` or
+// or as an atomic field argument `type foo ...,`, assumes the type has been consumed.
 // Returns false upon reaching tokenEOF or tokenError.
 //
 // isArgument should be true if the parameter is an argument of an atomic field.
 // TODO: Implement
 func (p parser) parseParameter(typTok token, obj fieldAdder, isArgument bool) bool {
+	var t token
+
+	// Get data type
 	dataType := typeFromToken(typTok)
 	if dataType == InvalidType {
-		// TODO
+		p.errors = append(p.errors, parseError("expecting a type, found "+t.String(),
+			p.lex.lineNumber()))
+		return p.expectArgDelim(p.lex.lineNumber(), false)
 	}
+
+	// Read optional parameter transform
+	var trans *Transform = nil
+	t = p.peek()
+	if t.typ == tokenOperator {
+		if !p.parseTransform(trans) {
+			return false
+		}
+	}
+
+	// Read optional range
+	var rng Range = nil
+	t = p.peek()
+	if t.typ == tokenLeftParen {
+		if !p.parseRange(rng) {
+			return false
+		}
+	}
+
+	// Read optional identifier
+	paramName := ""
+	t = p.peek()
+	if t.typ == tokenIdentifier {
+		paramName = t.val
+		p.next() // consume identifier
+	}
+
+	// Member variables require a name
+	if !isArgument && len(paramName) == 0 {
+		p.errors = append(p.errors, parseError("expecting a type, found "+t.String(),
+			p.lex.lineNumber()))
+		return p.expectArgDelim(p.lex.lineNumber(), false)
+	}
+
+	// Read optional default value
+	var value *big.Rat = nil // arbitrary precision rational number
+	t = p.peek()
+	if t.typ == tokenAssignment {
+		if !p.parseNumber(value) {
+			return false
+		}
+	}
+
+	// TODO handle read-in values
+
 	return true
+}
+
+// TODO: Doc and implement
+func (p parser) parseTransform(trans *Transform) bool {
+	return false
+}
+
+// TODO: Doc and implement
+func (p parser) parseRange(rng Range) bool {
+	return false
+}
+
+// TODO: Doc and implement
+func (p parser) parseNumber(rat *big.Rat) bool {
+	return false
+}
+
+// expectArgDelim checks if the next token is either a seperator ',', closing paren ')',
+// but won't consume it.  If the token is not the next token, it creates a parse error and consumes
+// all tokens upto but not including the next seperator or right paren.
+// Returns false upon reaching tokenEOF or tokenError.
+//
+// If isNext is false, no error will be produced if a valid token is not next
+// TODO: Implement
+func (p parser) expectArgDelim(startline int, isNext bool) bool {
+	var fail, next bool
+	next = true
+
+	t := p.peek()
+	for t.typ != tokenSeperator && t.typ != tokenRightParen &&
+		t.typ != tokenError && t.typ != tokenEOF {
+		p.next() // consume token
+
+		t = p.peek()
+	}
+
+	switch t.typ {
+	case tokenEOF:
+		p.next() // consume EOF
+		fail = true
+	case tokenError:
+		t = p.next() // get error token
+		p.errors = append(p.errors, lexError(t, p.lex.lineNumber()))
+		fail = true
+	}
+
+	if (isNext && next) || fail {
+		p.errors = append(p.errors,
+			parseError("missing seperator ','' or closing paren ')' after field argument", startline))
+	}
+
+	return !fail
 }
 
 // expectEndline checks if the next token is an endline ';' and then consumes it.

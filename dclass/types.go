@@ -5,6 +5,8 @@ type DataType int
 
 const (
 	InvalidType DataType = iota
+
+	// Basic DataTypes
 	Int8Type
 	Int16Type
 	Int32Type
@@ -18,7 +20,6 @@ const (
 	BlobType
 	CharType
 	StructType
-	ArrayType
 )
 
 // An Error is a dclass package specific error
@@ -113,4 +114,44 @@ func (k keywords) Keywords() []string {
 // implementing KeywordList
 func (k keywords) NumKeywords() int {
 	return len(k)
+}
+
+// A Transform defines a set of operations to perform on a parameter when being unpacked.
+// The inverse set of operations is performed when packing the data.
+type Transform struct{} // TODO: Define
+
+// A Range defines a constraint for a particular DataType
+type Range interface{}
+type RangeInt8 struct {
+	Min, Max int8
+}
+type RangeInt16 struct {
+	Min, Max int16
+}
+type RangeInt32 struct {
+	Min, Max int32
+}
+type RangeInt64 struct {
+	Min, Max int64
+}
+type RangeUint8 struct {
+	Min, Max uint8
+}
+type RangeUint16 struct {
+	Min, Max uint16
+}
+type RangeUint32 struct {
+	Min, Max uint32
+}
+type RangeUint64 struct {
+	Min, Max uint64
+}
+type RangeFloat struct {
+	Min, Max float64
+}
+type RangeLength struct {
+	RangeInt16
+}
+type RangeArray struct {
+	RangeInt16
 }

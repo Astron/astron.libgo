@@ -47,14 +47,16 @@ const (
 	tokenIdentifier  // alphanumeric identifier
 	tokenOperator    // one of '+', '-', '*', '/', or '%'
 	tokenLeftParen   // a left paren '(', opens function arguments or arithmetic clause
-	tokenRightParen  // a left ')', closes function arguments or arithemtic clause
+	tokenRightParen  // a right paren ')', closes function arguments or arithemtic clause
 	tokenLeftCurly   // a left curly '{', opens a block
 	tokenRightCurly  // a right curly '}', closes a block
+	tokenLeftSquare  // a left square '[', opens a sized array type defintion
+	tokenRightSquare // a right square ']', closes a sized array type definition
 	tokenComposition // a colon ':', indicates a list of components following
 	tokenEndline     // a semicolon ';', indicates the end of a statement
 	tokenSeperator   // a comma ',' used to seperate arguments or components
 	tokenAssignment  // an equality sign '=', indicates assignment (for defaults)
-	tokenArray       // a pair of square brackets "[]", indicating an array type
+	tokenVarArray    // a pair of square brackets "[]", indicating an unsized array type
 
 	// Keyword types
 	tokenKeyDelim // used only to delimit the keywords
@@ -119,7 +121,7 @@ var tokenName = map[tokenType]string{
 	tokenEndline:     ";",
 	tokenSeperator:   ",",
 	tokenAssignment:  "=",
-	tokenArray:       "[]",
+	tokenVarArray:    "[]",
 
 	tokenKeyword: "keyword",
 	tokenDClass:  "dclass",
@@ -154,14 +156,15 @@ type lexerFn func(*lexer) lexerFn
 
 // lexer holds the state of the scanner.
 type lexer struct {
-	input      string  // the string being scanned
-	state      lexerFn // the next lexing function to enter
-	pos        int     // current position in the input
-	start      int     // start position of this token
-	width      int     // width of last rune read from input
-	parenDepth int     // nesting depth of ( ) exprs
-	curlyDepth int     // nesting depth of { } blocks
-	canBackup  bool    // if backup has been called for this rune
+	input       string  // the string being scanned
+	state       lexerFn // the next lexing function to enter
+	pos         int     // current position in the input
+	start       int     // start position of this token
+	width       int     // width of last rune read from input
+	parenDepth  int     // nesting depth of ( ) exprs
+	curlyDepth  int     // nesting depth of { } blocks
+	squareDepth int     // nesting depth of [ ] arrays -- should never be > 1
+	canBackup   bool    // if backup has been called for this rune
 
 	// variables for lexer token output
 	lastPos     int        // position of most recent token returned by nextToken
@@ -292,6 +295,14 @@ const (
 
 // lexAny scans for any token (keyword, struct, or dclass)
 func lexAny(l *lexer) lexerFn {
+	if l.squareDepth > 0 {
+		r := l.next()
+		if r == ']' {
+			l.emit(tokenRightSquare)
+		} else {
+			return l.errorf("found opening '[' without matching ']' for array type definition.")
+		}
+	}
 	switch r := l.next(); {
 	case r == eof:
 		if l.parenDepth > 0 {
@@ -356,11 +367,17 @@ func lexAny(l *lexer) lexerFn {
 	case r == '\'':
 		return lexChar
 	case r == '[':
-		if l.peek() != ']' {
-			return l.errorf("found opening '[' without matching ']' for array.")
+		rn := l.peek()
+		if rn == '.' || ('0' <= rn && rn <= '9') {
+			l.emit(tokenLeftSquare)
+			l.squareDepth++
+			return lexNumber
+		} else if rn != ']' {
+			return l.errorf("unexpected character: %#U, following '['", rn)
 		}
-		l.next()
-		l.emit(tokenArray)
+
+		l.next() // consume "[]"
+		l.emit(tokenVarArray)
 	case r == ';':
 		l.emit(tokenEndline)
 	case isOperator(r):

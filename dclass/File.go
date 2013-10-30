@@ -1,8 +1,10 @@
 package dclass
 
 type File struct {
-	Classes map[string]*Class  // a map of class-name to distributed classes declared in the file
-	Structs map[string]*Struct // a map of class-name to distributed structs declared in the file
+	Classes []Type  // a list of classes and structs associated with the file
+	Fields  []Field // a list of fields associated with the file
+
+	ClassByName map[string]Type // a map of class names to classes and structs
 
 	keywords // implements KeywordList
 }
@@ -13,22 +15,29 @@ func (f *File) Hash() uint64 {
 	return 0
 }
 
-// AddStruct returns a new struct initialized with a name and unique index within the dclass file
-func (f *File) AddStruct(name string) *Struct {
-	s := new(Struct)
-	s.dcf = f
-	s.name = name
-	//c.index = f.nextIndex()
-	return s
-}
-
-// AddStruct returns a new class initialized with a name and unique index within the dclass file
-func (f *File) AddClass(name string) *Class {
-	c := new(Class)
-	c.dcf = f
-	c.name = name
-	//c.index = f.nextIndex()
-	return c
+// AddType returns a new Type initialized with a name and unique index within the dclass file.
+// The typ argument can be either "class" or "struct".
+func (f *File) AddType(name, typ string) Type {
+	switch typ {
+	case "class":
+		c := new(Class)
+		c.dcf = f
+		c.name = name
+		c.index = len(f.Classes)
+		f.Classes = append(f.Classes, c)
+		f.ClassByName[name] = c
+		return c
+	case "struct":
+		s := new(Struct)
+		s.dcf = f
+		s.name = name
+		s.index = len(f.Classes)
+		f.Classes = append(f.Classes, s)
+		f.ClassByName[name] = s
+		return s
+	default:
+		return nil
+	}
 }
 
 // addField is called by classes and structs to add a new field to the file
