@@ -81,9 +81,10 @@ func (p parser) parse(r io.Reader) *File {
 	return p.dcf
 }
 
-// returns false if upon reaching tokenEOF or tokenError
+// parseDeclaration parses a keyword, struct, or class declaration.
+// Returns false upon reaching tokenEOF or tokenError.
 func (p parser) parseDeclaration() bool {
-	t := p.lex.nextToken()
+	t := p.peek()
 	switch t.typ {
 	case tokenEOF:
 		return false
@@ -100,6 +101,8 @@ func (p parser) parseDeclaration() bool {
 		}
 		fallthrough
 	case tokenLeftCurly:
+		p.next() // consome left curly brace
+
 		p.errors = append(p.errors, parseError("expected a declaration but got '"+t.String()+"'",
 			p.lex.lineNumber()))
 		return p.expectRightCurly(p.lex.lineNumber())
@@ -113,7 +116,9 @@ func (p parser) parseDeclaration() bool {
 // parses a keyword declaration `keyword foo;`, assumes the keyword token has already been consumed
 // returns false if upon reaching tokenEOF or tokenError
 func (p parser) parseKeyword() bool {
-	t := p.lex.nextToken()
+	p.next() // consume "keyword"
+
+	t := p.next()
 	switch t.typ {
 	case tokenEOF:
 		p.errors = append(p.errors, parseError("incomplete 'keyword' declaration, found EOF",
@@ -133,10 +138,12 @@ func (p parser) parseKeyword() bool {
 	}
 }
 
-// parses a struct declaration `struct foo {...};`, assumes the struct token has already been consumed
-// returns false if upon reaching tokenEOF or tokenError
+// parseStruct parses a struct declaration `struct foo {...};`.
+// Returns false upon reaching tokenEOF or tokenError.
 func (p parser) parseStruct() bool {
-	t := p.lex.nextToken()
+	p.next() // consume "struct"
+
+	t := p.next()
 	switch t.typ {
 	case tokenEOF:
 		p.errors = append(p.errors, parseError("incomplete 'struct' declaration, found EOF",
@@ -163,10 +170,11 @@ func (p parser) parseStruct() bool {
 	}
 }
 
-// parses the inner struct definition given within a block '{...}'
+// parseStructInner parses the inner struct definition given within a block '{...}'.
+// Returns false upon reaching tokenEOF or tokenError.
 func (p parser) parseStructInner(s *Struct) bool {
 	// expect a left curly to open the definition block
-	t := p.lex.nextToken()
+	t := p.next()
 	switch t.typ {
 	case tokenEOF:
 		p.errors = append(p.errors, parseError("incomplete 'struct' declaration, found EOF",
@@ -184,13 +192,14 @@ func (p parser) parseStructInner(s *Struct) bool {
 	}
 
 	// parse for parameters till we find a RightCurly
-	t = p.lex.nextToken()
+	t = p.peek()
 	for t.typ != tokenRightCurly && t.typ != tokenEOF && t.typ != tokenError {
-		if !p.parseField(s, t) {
+		if !p.parseField(s) {
 			return false
 		}
-		t = p.lex.nextToken()
 	}
+
+	p.next() // consume rightCurly, EOF, or Error
 
 	// finished struct definition, handle any errors then expect endline
 	switch t.typ {
@@ -206,10 +215,12 @@ func (p parser) parseStructInner(s *Struct) bool {
 	return p.expectEndline(p.lex.lineNumber())
 }
 
-// parses a dclass declaration `dclass foo {...};`, assumes the struct token has already been consumed
-// returns false if upon reaching tokenEOF or tokenError
+// parseClass parses a dclass declaration `dclass foo {...};`.
+// Returns false upon reaching tokenEOF or tokenError.
 // TODO: Implement
 func (p parser) parseClass() bool {
+	p.next() // consume "dclass"
+
 	return true
 }
 
@@ -222,23 +233,23 @@ type fieldAdder interface {
 	AddField(name, typ string) Field
 }
 
-// parses a field, the first token should have been consumed and passed as an argument
-// returns false upon reaching tokenEOF or tokenError
-func (p parser) parseField(obj fieldAdder, first token) bool {
+// parseField parses a field. Returns false upon reaching tokenEOF or tokenError.
+func (p parser) parseField(obj fieldAdder) bool {
+	t := p.next()
 	switch {
-	case first.typ == tokenIdentifier:
-		switch p.lex.peekToken().typ {
+	case t.typ == tokenIdentifier:
+		switch p.peek().typ {
 		case tokenLeftParen:
-			return p.parseAtomic(first.val, obj)
+			return p.parseAtomic(t.val, obj)
 		case tokenComposition:
-			return p.parseMolecular(first.val, obj)
+			return p.parseMolecular(t.val, obj)
 		default:
-			return p.parseParameter(first, obj, false)
+			return p.parseParameter(t, obj, false)
 		}
-	case isDataTypeToken(first):
-		return p.parseParameter(first, obj, false)
+	case isDataTypeToken(t):
+		return p.parseParameter(t, obj, false)
 	default:
-		p.errors = append(p.errors, parseError("expecting a field, found "+first.String(),
+		p.errors = append(p.errors, parseError("expecting a field, found "+t.String(),
 			p.lex.lineNumber()))
 		return p.expectEndline(p.lex.lineNumber())
 	}
@@ -276,9 +287,9 @@ func (p parser) expectEndline(startline int) bool {
 	var fail, next bool
 
 	next = true
-	t := p.lex.nextToken()
+	t := p.next()
 	for t.typ != tokenEndline && t.typ != tokenEOF && t.typ != tokenError {
-		t = p.lex.nextToken()
+		t = p.next()
 		next = false
 	} // consume all tokens till endline
 
@@ -298,9 +309,9 @@ func (p parser) expectEndline(startline int) bool {
 }
 
 func (p parser) expectRightCurly(leftline int) bool {
-	t := p.lex.nextToken()
+	t := p.next()
 	for t.typ != tokenRightCurly && t.typ != tokenEOF && t.typ != tokenError {
-		t = p.lex.nextToken()
+		t = p.next()
 	} // consume all tokens till RightCurly
 
 	fail := false
@@ -333,6 +344,10 @@ func (p parser) next() token {
 
 		return t
 	}
+}
+
+func (p parser) peek() token {
+	return p.lex.peekToken()
 }
 
 func typeFromToken(t token) DataType {
