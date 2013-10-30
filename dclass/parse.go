@@ -155,7 +155,7 @@ func (p parser) parseStruct() bool {
 			return p.expectRightCurly(p.lex.lineNumber())
 		}
 
-		return p.parseStructInner(p.dcf.NewStruct(t.val))
+		return p.parseStructInner(p.dcf.AddStruct(t.val))
 	default:
 		p.errors = append(p.errors, parseError("unexpected '"+t.String()+"' in 'struct' declaration",
 			p.lex.lineNumber()))
@@ -227,44 +227,47 @@ type fieldAdder interface {
 func (p parser) parseField(obj fieldAdder, first token) bool {
 	switch {
 	case first.typ == tokenIdentifier:
-		t = p.lex.nextToken()
-		switch p.typ {
+		switch p.lex.peekToken().typ {
 		case tokenLeftParen:
-
-		}
-		if p.dcf.Classes[first.val] == nil {
-			p.parseParameter(obj, first, true)
-		} else {
-			p.parseMethod(obj, first.val)
+			return p.parseAtomic(first.val, obj)
+		case tokenComposition:
+			return p.parseMolecular(first.val, obj)
+		default:
+			return p.parseParameter(first, obj, false)
 		}
 	case isDataTypeToken(first):
-		p.parseParameter(obj, first, true)
+		return p.parseParameter(first, obj, false)
 	default:
-		p.errors = append(p.errors, parseError("expecting a field, found "+first.string(),
+		p.errors = append(p.errors, parseError("expecting a field, found "+first.String(),
 			p.lex.lineNumber()))
 		return p.expectEndline(p.lex.lineNumber())
 	}
-	return true
 }
 
-// parses an atomic field `foo(...) ...;`, assumes the identifier and left paren have been consumed
-// returns false upon reaching tokenEOF or tokenError
+// parses an atomic field `foo(...) ...;`, assumes the identifier has been consumed.
+// Returns false upon reaching tokenEOF or tokenError.
 // TODO: Implement
 func (p parser) parseAtomic(ident string, obj fieldAdder) bool {
 	return true
 }
 
-// parses a parameter `type foo ...;` as either a struct/class member variable
-// or as an atomic field argument, assumes the type and identifier have been consumed
-// 
-//
-// the allowKeywords argument should be true for a member variable or false for an argument
-// returns false upon reaching tokenEOF or tokenError
+// parses a molecular field `foo: baz, bar;`, assumes the identifier has been consumed.
+// Returns false upon reaching tokenEOF or tokenError.
 // TODO: Implement
-func (p parser) parseParameter(ident string, obj fieldAdder, t token, allowKeywords bool) bool {
-	datatype := typeFromToken(t)
-	if datatype == InvalidType {
-		p.errors = append(p.errors)
+func (p parser) parseMolecular(ident string, obj fieldAdder) bool {
+	return true
+}
+
+// parses a parameter `type foo ...;` as either a struct/class member variable
+// or as an atomic field argument, assumes the type has been consumed.
+// Returns false upon reaching tokenEOF or tokenError.
+//
+// isArgument should be true if the parameter is an argument of an atomic field.
+// TODO: Implement
+func (p parser) parseParameter(typTok token, obj fieldAdder, isArgument bool) bool {
+	dataType := typeFromToken(typTok)
+	if dataType == InvalidType {
+		// TODO
 	}
 	return true
 }
@@ -332,7 +335,7 @@ func (p parser) next() token {
 	}
 }
 
-func typeFromToken(t token) dataTyp {
+func typeFromToken(t token) DataType {
 	switch t.typ {
 	case tokenInt8:
 		return Int8Type

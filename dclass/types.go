@@ -18,6 +18,7 @@ const (
 	BlobType
 	CharType
 	StructType
+	ArrayType
 )
 
 // An Error is a dclass package specific error

@@ -154,16 +154,20 @@ type lexerFn func(*lexer) lexerFn
 
 // lexer holds the state of the scanner.
 type lexer struct {
-	input      string     // the string being scanned
-	state      lexerFn    // the next lexing function to enter
-	pos        int        // current position in the input
-	start      int        // start position of this token
-	width      int        // width of last rune read from input
-	lastPos    int        // position of most recent token returned by nextToken
-	tokens     chan token // channel of scanned tokens
-	parenDepth int        // nesting depth of ( ) exprs
-	curlyDepth int        // nesting depth of { } blocks
-	canBackup  bool       // if backup has been called for this rune
+	input      string  // the string being scanned
+	state      lexerFn // the next lexing function to enter
+	pos        int     // current position in the input
+	start      int     // start position of this token
+	width      int     // width of last rune read from input
+	parenDepth int     // nesting depth of ( ) exprs
+	curlyDepth int     // nesting depth of { } blocks
+	canBackup  bool    // if backup has been called for this rune
+
+	// variables for lexer token output
+	lastPos     int        // position of most recent token returned by nextToken
+	tokens      chan token // channel of scanned tokens
+	peekedToken token      // the previous token to come out (for peek)
+	hasPeeked   bool       // if true peekedToken is the next token
 }
 
 // next returns the next rune in the input.
@@ -238,9 +242,25 @@ func (l *lexer) errorf(format string, args ...interface{}) lexerFn {
 
 // nextToken returns the next token from the input.
 func (l *lexer) nextToken() token {
-	token := <-l.tokens
-	l.lastPos = token.pos
-	return token
+	var t token
+	if l.hasPeeked {
+		l.hasPeeked = false
+		t = l.peekedToken
+	} else {
+		t = <-l.tokens
+	}
+
+	l.lastPos = t.pos
+	return t
+}
+
+// peekToken returns but does not consume the next token from the input.
+func (l *lexer) peekToken() token {
+	if !l.hasPeeked {
+		l.hasPeeked = true
+		l.peekedToken = <-l.tokens
+	}
+	return l.peekedToken
 }
 
 // lex creates a new scanner for the input string.
@@ -539,5 +559,5 @@ func isOperator(r rune) bool {
 }
 
 func isDataTypeToken(t token) bool {
-	return t > tokenTypeDelim
+	return t.typ > tokenTypeDelim
 }
